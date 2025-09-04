@@ -1,0 +1,235 @@
+:root {
+  /* Color Palette */
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --background-color: #f0f8ff;
+  --surface-color: #ffffff;
+  --text-color: #212529;
+  --border-color: #dee2e6;
+  --shadow-color: rgba(0, 0, 0, 0.075);
+  --font-family: "Inter", sans-serif;
+
+  /* Label Dimensions (These are for the FINAL PDF, not the preview display) */
+  --card-w: 40mm;
+  --card-h: 40mm;
+  --qr-size: 60mm; /* This dictates the CSS display size of the *preview* QR */
+}
+
+/* Global Reset & Base Styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: var(--font-family);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.header p {
+  font-size: 16px;
+  color: var(--secondary-color);
+  margin: 0;
+}
+
+/* Main Wrapper for Layout */
+.wrap {
+  display: flex;
+  flex-direction: column; /* Mobile-first: stacks cards vertically */
+  gap: 24px;
+  align-items: center;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Card Styling */
+.card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  width: 100%;
+  max-width: 420px;
+  transition: box-shadow 0.2s ease;
+}
+
+.card h2 {
+  font-size: 18px;
+  margin: 0 0 16px;
+  font-weight: 700;
+}
+
+/* Form Controls */
+.controls {
+  display: grid;
+  gap: 16px;
+}
+
+label {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: block;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Button Styling */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.btn-secondary {
+  background: #e9ecef;
+  color: var(--text-color);
+}
+
+.btn-secondary:hover {
+  background: #d3d9df;
+}
+
+.btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.muted {
+  font-size: 13px;
+  color: var(--secondary-color);
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* Preview Area */
+.preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+}
+
+.preview {
+  /* These dimensions are for the visual preview card, not the final PDF */
+  width: calc(var(--qr-size) + 15mm); /* Adjusted to give more space for text */
+  height: calc(
+    var(--qr-size) + 20mm
+  ); /* Adjusted to give more space for text */
+  background: var(--surface-color);
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 5mm;
+  overflow: hidden; /* Ensure content doesn't overflow */
+}
+
+#qrPreview canvas {
+  /* This makes the preview canvas match the conceptual size */
+  width: var(--qr-size) !important;
+  height: var(--qr-size) !important;
+  display: block; /* Remove any extra space below the canvas */
+}
+
+.phone {
+  margin-top: 3mm; /* Adjusted for better spacing */
+  font-weight: bold;
+  font-size: 20pt;
+  text-align: center;
+  width: calc(var(--qr-size) + 5mm); /* Give it a bit more width than QR */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Add ellipsis for long numbers */
+}
+
+.name {
+  margin-top: 1.5mm;
+  font-size: 15pt;
+  font-weight: 600;
+  text-align: center;
+  width: calc(var(--qr-size) + 5mm); /* Give it a bit more width than QR */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Add ellipsis for long names */
+}
+
+/* Hidden Hi-Res QR for PDF */
+#qrHiddenCanvas {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+}
+
+/* Responsive Layout: Tablet and Desktop */
+@media (min-width: 768px) {
+  .wrap {
+    flex-direction: row; /* Side-by-side layout */
+    align-items: flex-start; /* Align cards to the top */
+    justify-content: center;
+  }
+  .card {
+    flex: 1; /* Allow cards to grow */
+  }
+}

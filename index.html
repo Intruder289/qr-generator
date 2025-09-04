@@ -1,250 +1,449 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>4x4 QR Label Maker</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QR Label Maker</title>
 
-<!-- QR generator -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 
-<style>
-  :root{
-    --card-w: 40mm;      /* total label width 4cm */
-    --card-h: 40mm;      /* total label height 4cm */
-    --qr-size: 25mm;     /* QR size 2.5cm */
-  }
-  *{ box-sizing: border-box; }
-  body{
-    margin:0; padding:24px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    background:#f7f7f8; color:#111;
-  }
-  .wrap{
-    max-width:1000px; margin:0 auto; display:grid; gap:24px;
-    grid-template-columns: 1fr minmax(260px, 320px);
-  }
-  h1{ font-size:18px; margin:0 0 8px; font-weight:700; }
-  .card{
-    background:#fff; border:1px solid #eee; border-radius:16px; padding:16px;
-    box-shadow: 0 6px 24px rgba(0,0,0,.06);
-  }
-  .controls{ display:grid; gap:12px; }
-  label{ font-size:12px; color:#333; margin-bottom:6px; display:block; }
-  input, textarea, button{
-    width:100%; padding:10px 12px; border:1px solid #e5e6eb; border-radius:10px; background:#fff; outline:none;
-    font: inherit;
-  }
-  input:focus, textarea:focus{ border-color:#c9cbd3; box-shadow:0 0 0 4px rgba(0,0,0,.04); }
-  .row{ display:grid; gap:10px; grid-template-columns:1fr; }
-  .btn{
-    background:#111; color:#fff; cursor:pointer; font-weight:600; border:none;
-    transition:transform .04s ease, box-shadow .2s ease, opacity .2s ease;
-  }
-  .btn:hover{ transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.12); }
-  .btn.secondary{ background:#f1f2f6; color:#111; }
-  .muted{ font-size:12px; color:#666; }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  /* Preview area */
-  .preview-panel{ display:grid; gap:12px; align-content:start; }
-  .preview{
-    width: var(--card-w);
-    height: var(--card-h);
-    background:#fff;
-    border: 1px dashed #d1d5db;
-    border-radius:12px;
-    display:flex; flex-direction:column; align-items:center;
-    padding:6mm 4mm 4mm;
-    /* subtle checker bg for layout awareness */
-    background-image:
-      linear-gradient(90deg, rgba(0,0,0,.03) 1px, transparent 1px),
-      linear-gradient(rgba(0,0,0,.03) 1px, transparent 1px);
-    background-size: 5mm 5mm;
-    position:relative;
-    overflow:hidden;
-  }
-  .qr-holder{
-    width: var(--qr-size);
-    height: var(--qr-size);
-    display:grid; place-items:center;
-  }
-  .line{
-    width:100%;
-    text-align:center;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .phone{ margin-top:4mm; font-size:10pt; letter-spacing:0.2px; }
-  .name{ margin-top:2mm; font-size:10pt; font-weight:600; }
+    <!-- <link rel="stylesheet" href="style.css" /> -->
+    <style>
+        :root {
+            /* Color Palette */
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #f0f8ff;
+            --surface-color: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --shadow-color: rgba(0, 0, 0, 0.075);
+            --font-family: "Inter", sans-serif;
 
-  /* Put the high-res QR offscreen (used for crisp PDF) */
-  #qrHiddenCanvas { position:absolute; left:-99999px; top:-99999px; }
-</style>
+            /* Label Dimensions (These are for the FINAL PDF, not the preview display) */
+            --card-w: 40mm;
+            --card-h: 40mm;
+            --qr-size: 60mm;
+            /* This dictates the CSS display size of the *preview* QR */
+        }
+
+        /* Global Reset & Base Styles */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 4px;
+        }
+
+        .header p {
+            font-size: 16px;
+            color: var(--secondary-color);
+            margin: 0;
+        }
+
+        /* Main Wrapper for Layout */
+        .wrap {
+            display: flex;
+            flex-direction: column;
+            /* Mobile-first: stacks cards vertically */
+            gap: 24px;
+            align-items: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Card Styling */
+        .card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            width: 100%;
+            max-width: 420px;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin: 0 0 16px;
+            font-weight: 700;
+        }
+
+        /* Form Controls */
+        .controls {
+            display: grid;
+            gap: 16px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        /* Button Styling */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background: #d3d9df;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .muted {
+            font-size: 13px;
+            color: var(--secondary-color);
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        /* Preview Area */
+        .preview-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px 0;
+        }
+
+        .preview {
+            /* These dimensions are for the visual preview card, not the final PDF */
+            width: calc(var(--qr-size) + 15mm);
+            /* Adjusted to give more space for text */
+            height: calc(var(--qr-size) + 20mm);
+            /* Adjusted to give more space for text */
+            background: var(--surface-color);
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 5mm;
+            overflow: hidden;
+            /* Ensure content doesn't overflow */
+        }
+
+        #qrPreview canvas {
+            /* This makes the preview canvas match the conceptual size */
+            width: var(--qr-size) !important;
+            height: var(--qr-size) !important;
+            display: block;
+            /* Remove any extra space below the canvas */
+        }
+
+        .phone {
+            margin-top: 3mm;
+            /* Adjusted for better spacing */
+            font-weight: bold;
+            font-size: 20pt;
+            text-align: center;
+            width: calc(var(--qr-size) + 5mm);
+            /* Give it a bit more width than QR */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            /* Add ellipsis for long numbers */
+        }
+
+        .name {
+            margin-top: 1.5mm;
+            font-size: 15pt;
+            font-weight: 600;
+            text-align: center;
+            width: calc(var(--qr-size) + 5mm);
+            /* Give it a bit more width than QR */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            /* Add ellipsis for long names */
+        }
+
+        /* Hidden Hi-Res QR for PDF */
+        #qrHiddenCanvas {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+        }
+
+        /* Responsive Layout: Tablet and Desktop */
+        @media (min-width: 768px) {
+            .wrap {
+                flex-direction: row;
+                /* Side-by-side layout */
+                align-items: flex-start;
+                /* Align cards to the top */
+                justify-content: center;
+            }
+
+            .card {
+                flex: 1;
+                /* Allow cards to grow */
+            }
+        }
+    </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <!-- Left: live preview -->
-    <div class="card preview-panel">
-      <h1>Preview (4 × 4 cm)</h1>
-      <div class="preview" id="labelPreview" aria-label="4x4 cm label preview">
-        <div class="qr-holder">
-          <div id="qrPreview"></div>
-        </div>
-        <div class="line phone" id="phonePreview">+255 700 000 000</div>
-        <div class="line name" id="namePreview">John Doe</div>
-      </div>
-      <div class="muted">The dashed border is just a guide. Exported PDF is a clean 4×4 cm square.</div>
+    <div class="header">
+        <h1>QR Label Maker</h1>
+        <!-- <p>Create and export 4x4 cm labels with QR codes easily.</p> -->
     </div>
 
-    <!-- Right: controls -->
-    <div class="card">
-      <h1>QR Label Builder</h1>
-      <div class="controls">
-        <div>
-          <label for="qrData">QR Content (what the code should encode)</label>
-          <textarea id="qrData" rows="3" placeholder="e.g. https://example.com or plain text">Sample QR content</textarea>
-        </div>
-        <div class="row">
-          <div>
-            <label for="phone">Phone (shown below QR)</label>
-            <input id="phone" type="text" placeholder="+255 700 000 000" value="+255 700 000 000" />
-          </div>
-        </div>
-        <div>
-          <label for="name">Name (shown at the bottom)</label>
-          <input id="name" type="text" placeholder="John Doe" value="John Doe" />
+    <div class="wrap">
+        <div class="card">
+            <h2>Label Builder</h2>
+            <div class="controls">
+                <div>
+                    <label for="qrData">QR Content (URL, Text, etc.)</label>
+                    <textarea id="qrData" rows="3">https://www.google.com</textarea>
+                </div>
+                <div>
+                    <label for="name">Name</label>
+                    <input id="name" type="text" value="John Doe" />
+                </div>
+                <div>
+                    <label for="phone">Phone Number</label>
+                    <input id="phone" type="text" value="12 453 65" />
+                </div>
+
+                <button class="btn btn-primary" id="btnGenerate">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z" />
+                        <path fill-rule="evenodd"
+                            d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.5A4.5 4.5 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 1 8.757-4.282.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.5A4.5 4.5 0 0 0 8 13c1.552 0 2.94-.707 3.857-1.818a.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z" />
+                    </svg>
+                    <span>Generate / Update</span>
+                </button>
+                <button class="btn btn-primary" id="btnExport">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                        <path
+                            d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
+                    </svg>
+                    <span>Export 4x4 cm PDF</span>
+                </button>
+                <button class="btn btn-secondary" id="btnClear">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z" />
+                    </svg>
+                    <span>Clear All Fields</span>
+                </button>
+            </div>
         </div>
 
-        <div class="row">
-          <button class="btn" id="btnGenerate">Generate / Update</button>
-          <button class="btn secondary" id="btnClear">Clear</button>
-          <button class="btn" id="btnExport">Export 4×4 cm as PDF</button>
+        <div class="card">
+            <h2>Preview (4 x 4 cm)</h2>
+            <div class="preview-container">
+                <div class="preview">
+                    <div id="qrPreview"></div>
+                    <div class="phone" id="phonePreview">12 453 65</div>
+                    <div class="name" id="namePreview">John Doe</div>
+                </div>
+            </div>
+            <div class="muted">* Pdf size is 4x4 cm</div>
         </div>
-
-        <div class="muted">
-          Tip: Use “Generate / Update” to refresh the preview after editing fields. Then hit Export. Easy money.
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- Hidden high-res QR for crisp PDF output -->
-  <div id="qrHiddenCanvas"></div>
+    <div id="qrHiddenCanvas"></div>
 
-<script>
-(function(){
-  const mmToPx = mm => Math.round(mm * 96 / 25.4); // CSS px approximation (96dpi)
-  const PREVIEW_QR_MM = 25;         // visual size on preview (fixed by CSS too)
-  const EXPORT_QR_MM  = 25;         // printed size in PDF
-  const EXPORT_DPI    = 600;        // render QR at hi-res then scale down in PDF
-  const EXPORT_QR_PX  = Math.round((EXPORT_QR_MM / 25.4) * EXPORT_DPI); // true pixels for hidden QR
-  const PREVIEW_QR_PX = Math.max(mmToPx(PREVIEW_QR_MM), 220); // keep preview reasonably crisp
+    <script>
+        (function () {
+            // --- Constants ---
+            // These determine the actual size of the QR code in the *exported PDF*.
+            // These values remain exactly as you specified for the final output.
+            const EXPORT_QR_MM = 25;
+            const EXPORT_DPI = 600; // High DPI for crisp PDF output
+            const EXPORT_QR_PX = Math.round((EXPORT_QR_MM / 25.4) * EXPORT_DPI);
 
-  const qrPreviewEl = document.getElementById('qrPreview');
-  const qrHiddenEl  = document.getElementById('qrHiddenCanvas');
-  const phoneInput  = document.getElementById('phone');
-  const nameInput   = document.getElementById('name');
-  const dataInput   = document.getElementById('qrData');
-  const phoneOut    = document.getElementById('phonePreview');
-  const nameOut     = document.getElementById('namePreview');
+            // --- DOM Element References ---
+            const qrPreviewEl = document.getElementById('qrPreview');
+            const qrHiddenEl = document.getElementById('qrHiddenCanvas');
+            const phoneInput = document.getElementById('phone');
+            const nameInput = document.getElementById('name');
+            const dataInput = document.getElementById('qrData');
+            const phoneOut = document.getElementById('phonePreview');
+            const nameOut = document.getElementById('namePreview');
 
-  let qrPrevInstance = null;
-  let qrHidInstance  = null;
+            // --- Utility Functions ---
+            function clearNode(node) {
+                while (node.firstChild) {
+                    node.removeChild(node.firstChild);
+                }
+            }
 
-  function clearNode(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+            // --- Core Functions ---
+            function generateQR() {
+                const data = dataInput.value.trim() || ' '; // Use a space to generate an empty-like QR
+                const phone = phoneInput.value.trim();
+                const name = nameInput.value.trim();
 
-  function genQR(){
-    const data  = (dataInput.value || '').trim() || ' ';
-    const phone = (phoneInput.value || '').trim();
-    const name  = (nameInput.value || '').trim();
+                // Update preview text
+                phoneOut.textContent = phone || ' ';
+                nameOut.textContent = name || ' ';
 
-    phoneOut.textContent = phone || ' ';
-    nameOut.textContent  = name  || ' ';
+                // Generate low-res preview QR.
+                // The `width` and `height` here are for the *rendering* of the QR code
+                // for the on-screen preview. The CSS handles its display size.
+                clearNode(qrPreviewEl);
+                new QRCode(qrPreviewEl, {
+                    text: data,
+                    width: 200, // Increased for better on-screen visibility
+                    height: 200, // Increased for better on-screen visibility
+                    correctLevel: QRCode.CorrectLevel.M
+                });
 
-    // preview (lower px, scaled via CSS holder to exact 25mm)
-    clearNode(qrPreviewEl);
-    qrPrevInstance = new QRCode(qrPreviewEl, {
-      text: data,
-      width: PREVIEW_QR_PX,
-      height: PREVIEW_QR_PX,
-      correctLevel: QRCode.CorrectLevel.M
-    });
+                // Generate hidden hi-res QR for PDF export.
+                // This uses the EXPORT_QR_PX for high resolution in the PDF.
+                clearNode(qrHiddenEl);
+                new QRCode(qrHiddenEl, {
+                    text: data,
+                    width: EXPORT_QR_PX,
+                    height: EXPORT_QR_PX,
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
 
-    // hidden hi-res (for PDF)
-    clearNode(qrHiddenEl);
-    qrHidInstance = new QRCode(qrHiddenEl, {
-      text: data,
-      width: EXPORT_QR_PX,
-      height: EXPORT_QR_PX,
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  }
+            function clearAllFields() {
+                dataInput.value = '';
+                phoneInput.value = '';
+                nameInput.value = '';
+                phoneOut.textContent = ' ';
+                nameOut.textContent = ' ';
+                clearNode(qrPreviewEl);
+                clearNode(qrHiddenEl);
+            }
 
-  function clearAll(){
-    dataInput.value  = '';
-    phoneInput.value = '';
-    nameInput.value  = '';
-    phoneOut.textContent = ' ';
-    nameOut.textContent  = ' ';
-    clearNode(qrPreviewEl);
-    clearNode(qrHiddenEl);
-  }
+            function exportToPDF() {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ unit: 'mm', format: [40, 40] });
 
-  async function exportPDF(){
-    const { jsPDF } = window.jspdf;
-    // Create a 40x40 mm PDF
-    const pdf = new jsPDF({ unit: 'mm', format: [40, 40] });
+                const phone = phoneInput.value.trim();
+                const name = nameInput.value.trim();
 
-    const phone = (phoneInput.value || '').trim();
-    const name  = (nameInput.value || '').trim();
+                const hiddenCanvas = qrHiddenEl.querySelector('canvas');
+                if (!hiddenCanvas) {
+                    alert('Please generate a QR code first by clicking the "Generate / Update" button.');
+                    return;
+                }
+                const qrDataURL = hiddenCanvas.toDataURL('image/png');
 
-    // Grab hidden QR canvas image (ensure it exists)
-    const hiddenCanvas = qrHiddenEl.querySelector('canvas');
-    if(!hiddenCanvas){
-      alert('Generate the QR first.');
-      return;
-    }
-    const qrDataURL = hiddenCanvas.toDataURL('image/png');
+                // PDF layout constants (in mm)
+                const PAGE_W = 40, QR_W = 25, MARGIN_TOP = 5;
+                const X = (PAGE_W - QR_W) / 2, Y = MARGIN_TOP;
 
-    // Layout math
-    const PAGE_W = 40, PAGE_H = 40;
-    const QR_W = 25, QR_H = 25;   // mm
-    const MARGIN_TOP = 5;         // mm from top to QR
-    const X = (PAGE_W - QR_W) / 2;
-    const Y = MARGIN_TOP;
+                pdf.addImage(qrDataURL, 'PNG', X, Y, QR_W, QR_W);
 
-    pdf.addImage(qrDataURL, 'PNG', X, Y, QR_W, QR_H);
+                // --- PDF Text Export Logic ---
+                if (phone) {
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(12);
+                    pdf.text(phone, PAGE_W / 2, Y + QR_W + 4, { align: 'center', maxWidth: QR_W });
+                }
+                if (name) {
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(8);
+                    pdf.text(name, PAGE_W / 2, Y + QR_W + 8, { align: 'center' });
+                }
+                // --- End of PDF Text Export Logic ---
 
-    // Text: centered
-    pdf.setTextColor(0,0,0);
-    pdf.setFont('helvetica','normal');
-    pdf.setFontSize(8); // pt
+                pdf.save(`qr_label_${name.replace(/ /g, "_") || '4x4cm'}.pdf`);
+            }
 
-    // phone under QR
-    const phoneY = Y + QR_H + 2; // 2mm gap
-    if (phone) {
-      pdf.text(phone, PAGE_W/2, phoneY, { align:'center', baseline:'top' });
-    }
+            // --- Event Listeners ---
+            document.getElementById('btnGenerate').addEventListener('click', generateQR);
+            document.getElementById('btnClear').addEventListener('click', clearAllFields);
+            document.getElementById('btnExport').addEventListener('click', exportToPDF);
 
-    // name under phone
-    const nameY = phone ? (phoneY + 4) : (Y + QR_H + 4);
-    if (name) {
-      pdf.setFont('helvetica','bold');
-      pdf.text(name, PAGE_W/2, nameY, { align:'center', baseline:'top' });
-    }
-
-    pdf.save('qr_label_4x4cm.pdf');
-  }
-
-  document.getElementById('btnGenerate').addEventListener('click', genQR);
-  document.getElementById('btnClear').addEventListener('click', clearAll);
-  document.getElementById('btnExport').addEventListener('click', exportPDF);
-
-  // First render
-  genQR();
-})();
-</script>
+            // --- Initial QR Generation on Load ---
+            generateQR();
+        })();
+    </script>
 </body>
+
 </html>
