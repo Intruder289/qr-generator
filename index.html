@@ -13,7 +13,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- <link rel="stylesheet" href="style.css" /> -->
     <style>
         :root {
             /* Color Palette */
@@ -31,6 +30,12 @@
             --card-h: 40mm;
             --qr-size: 60mm;
             /* This dictates the CSS display size of the *preview* QR */
+
+            /* NEW: Text Style Variables */
+            --phone-font-size: 20pt;
+            --phone-top-margin: 3mm;
+            --name-font-size: 15pt;
+            --name-top-margin: 1.5mm;
         }
 
         /* Global Reset & Base Styles */
@@ -96,6 +101,14 @@
             font-weight: 700;
         }
 
+        .card h3 {
+            font-size: 16px;
+            margin: 20px 0 12px;
+            font-weight: 500;
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+        }
+
         /* Form Controls */
         .controls {
             display: grid;
@@ -129,6 +142,36 @@
         textarea {
             resize: vertical;
         }
+
+        /* NEW: Slider Control Styling */
+        .slider-control {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-control label {
+            margin-bottom: 0;
+            font-size: 13px;
+        }
+
+        .slider-control span {
+            font-size: 13px;
+            color: var(--secondary-color);
+            font-weight: 500;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        input[type="range"] {
+            grid-column: 1 / -1;
+            /* Span both columns */
+            width: 100%;
+            padding: 0;
+            margin-top: 4px;
+        }
+
 
         /* Button Styling */
         .btn {
@@ -215,10 +258,10 @@
         }
 
         .phone {
-            margin-top: 3mm;
-            /* Adjusted for better spacing */
+            /* UPDATED: Uses CSS variables now */
+            margin-top: var(--phone-top-margin);
             font-weight: bold;
-            font-size: 20pt;
+            font-size: var(--phone-font-size);
             text-align: center;
             width: calc(var(--qr-size) + 5mm);
             /* Give it a bit more width than QR */
@@ -229,8 +272,9 @@
         }
 
         .name {
-            margin-top: 1.5mm;
-            font-size: 15pt;
+            /* UPDATED: Uses CSS variables now */
+            margin-top: var(--name-top-margin);
+            font-size: var(--name-font-size);
             font-weight: 600;
             text-align: center;
             width: calc(var(--qr-size) + 5mm);
@@ -269,7 +313,6 @@
 <body>
     <div class="header">
         <h1>QR Label Maker</h1>
-        <!-- <p>Create and export 4x4 cm labels with QR codes easily.</p> -->
     </div>
 
     <div class="wrap">
@@ -289,6 +332,27 @@
                     <input id="phone" type="text" value="12 453 65" />
                 </div>
 
+                <h3>Text Styling</h3>
+                <div class="slider-control">
+                    <label for="phoneSize">Phone Font Size</label>
+                    <span id="phoneSizeValue">20 pt</span>
+                    <input id="phoneSize" type="range" min="8" max="30" value="20" step="1">
+                </div>
+                <div class="slider-control">
+                    <label for="phoneTopMargin">Phone Top Spacing</label>
+                    <span id="phoneTopMarginValue">3.0 mm</span>
+                    <input id="phoneTopMargin" type="range" min="0" max="10" value="3" step="0.1">
+                </div>
+                <div class="slider-control">
+                    <label for="nameSize">Name Font Size</label>
+                    <span id="nameSizeValue">15 pt</span>
+                    <input id="nameSize" type="range" min="8" max="30" value="15" step="1">
+                </div>
+                <div class="slider-control">
+                    <label for="nameTopMargin">Name Top Spacing</label>
+                    <span id="nameTopMarginValue">1.5 mm</span>
+                    <input id="nameTopMargin" type="range" min="0" max="10" value="1.5" step="0.1">
+                </div>
                 <button class="btn btn-primary" id="btnGenerate">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
                         <path
@@ -335,20 +399,31 @@
     <script>
         (function () {
             // --- Constants ---
-            // These determine the actual size of the QR code in the *exported PDF*.
-            // These values remain exactly as you specified for the final output.
             const EXPORT_QR_MM = 25;
             const EXPORT_DPI = 600; // High DPI for crisp PDF output
             const EXPORT_QR_PX = Math.round((EXPORT_QR_MM / 25.4) * EXPORT_DPI);
+            
+            // NEW: Point to MM conversion
+            const PT_TO_MM = 25.4 / 72; // ~0.352mm per point
 
             // --- DOM Element References ---
             const qrPreviewEl = document.getElementById('qrPreview');
             const qrHiddenEl = document.getElementById('qrHiddenCanvas');
-            const phoneInput = document.getElementById('phone');
-            const nameInput = document.getElementById('name');
             const dataInput = document.getElementById('qrData');
-            const phoneOut = document.getElementById('phonePreview');
+            const nameInput = document.getElementById('name');
+            const phoneInput = document.getElementById('phone');
             const nameOut = document.getElementById('namePreview');
+            const phoneOut = document.getElementById('phonePreview');
+
+            // NEW: Slider DOM References
+            const phoneSizeSlider = document.getElementById('phoneSize');
+            const phoneSizeValue = document.getElementById('phoneSizeValue');
+            const phoneTopMarginSlider = document.getElementById('phoneTopMargin');
+            const phoneTopMarginValue = document.getElementById('phoneTopMarginValue');
+            const nameSizeSlider = document.getElementById('nameSize');
+            const nameSizeValue = document.getElementById('nameSizeValue');
+            const nameTopMarginSlider = document.getElementById('nameTopMargin');
+            const nameTopMarginValue = document.getElementById('nameTopMarginValue');
 
             // --- Utility Functions ---
             function clearNode(node) {
@@ -356,30 +431,28 @@
                     node.removeChild(node.firstChild);
                 }
             }
+            
+            function setCssVar(name, value) {
+                document.documentElement.style.setProperty(name, value);
+            }
 
             // --- Core Functions ---
             function generateQR() {
-                const data = dataInput.value.trim() || ' '; // Use a space to generate an empty-like QR
+                const data = dataInput.value.trim() || ' '; 
                 const phone = phoneInput.value.trim();
                 const name = nameInput.value.trim();
 
-                // Update preview text
                 phoneOut.textContent = phone || ' ';
                 nameOut.textContent = name || ' ';
 
-                // Generate low-res preview QR.
-                // The `width` and `height` here are for the *rendering* of the QR code
-                // for the on-screen preview. The CSS handles its display size.
                 clearNode(qrPreviewEl);
                 new QRCode(qrPreviewEl, {
                     text: data,
-                    width: 200, // Increased for better on-screen visibility
-                    height: 200, // Increased for better on-screen visibility
+                    width: 200, 
+                    height: 200,
                     correctLevel: QRCode.CorrectLevel.M
                 });
 
-                // Generate hidden hi-res QR for PDF export.
-                // This uses the EXPORT_QR_PX for high resolution in the PDF.
                 clearNode(qrHiddenEl);
                 new QRCode(qrHiddenEl, {
                     text: data,
@@ -397,6 +470,16 @@
                 nameOut.textContent = ' ';
                 clearNode(qrPreviewEl);
                 clearNode(qrHiddenEl);
+                
+                phoneSizeSlider.value = 20;
+                phoneTopMarginSlider.value = 3;
+                nameSizeSlider.value = 15;
+                nameTopMarginSlider.value = 1.5;
+
+                updatePhoneSize();
+                updatePhoneMargin();
+                updateNameSize();
+                updateNameMargin();
             }
 
             function exportToPDF() {
@@ -416,29 +499,77 @@
                 // PDF layout constants (in mm)
                 const PAGE_W = 40, QR_W = 25, MARGIN_TOP = 5;
                 const X = (PAGE_W - QR_W) / 2, Y = MARGIN_TOP;
+                const QR_BOTTOM = Y + QR_W; // Y-position of the QR code's bottom edge (e.g., 5 + 25 = 30mm)
 
                 pdf.addImage(qrDataURL, 'PNG', X, Y, QR_W, QR_W);
 
-                // --- PDF Text Export Logic ---
+                // --- FIXED: PDF Text Export Logic ---
+                // Get current values from sliders
+                const phoneSize = parseFloat(phoneSizeSlider.value);
+                const phoneMargin = parseFloat(phoneTopMarginSlider.value); // Space below QR
+                const nameSize = parseFloat(nameSizeSlider.value);
+                const nameMargin = parseFloat(nameTopMarginSlider.value); // Space below Phone
+                
+                // Calculate Y positions
+                
+                // 1. Calculate Phone Y position
+                const phoneY = QR_BOTTOM + phoneMargin;
+
+                // 2. Calculate Name Y position - FIXED
+                // We need to account for the actual height of the phone text
+                // A good approximation is to use 0.7 * font size (in mm) as the text height
+                const phoneSizeInMm = phoneSize * PT_TO_MM;
+                const nameY = phoneY + (phoneSizeInMm * 0.7) + nameMargin;
+
                 if (phone) {
                     pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(12);
-                    pdf.text(phone, PAGE_W / 2, Y + QR_W + 4, { align: 'center', maxWidth: QR_W });
+                    pdf.setFontSize(phoneSize);
+                    // Center the text horizontally
+                    pdf.text(phone, PAGE_W / 2, phoneY, { align: 'center', maxWidth: QR_W + 10 });
                 }
                 if (name) {
                     pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(8);
-                    pdf.text(name, PAGE_W / 2, Y + QR_W + 8, { align: 'center' });
+                    pdf.setFontSize(nameSize);
+                    // Center the text horizontally
+                    pdf.text(name, PAGE_W / 2, nameY, { align: 'center', maxWidth: QR_W + 10 });
                 }
-                // --- End of PDF Text Export Logic ---
 
                 pdf.save(`qr_label_${name.replace(/ /g, "_") || '4x4cm'}.pdf`);
+            }
+
+            // --- NEW: Event Handlers for Sliders ---
+            function updatePhoneSize() {
+                const val = phoneSizeSlider.value;
+                phoneSizeValue.textContent = `${val} pt`;
+                setCssVar('--phone-font-size', `${val}pt`);
+            }
+            function updatePhoneMargin() {
+                const val = parseFloat(phoneTopMarginSlider.value).toFixed(1);
+                phoneTopMarginValue.textContent = `${val} mm`;
+                setCssVar('--phone-top-margin', `${val}mm`);
+            }
+            function updateNameSize() {
+                const val = nameSizeSlider.value;
+                nameSizeValue.textContent = `${val} pt`;
+                setCssVar('--name-font-size', `${val}pt`);
+            }
+            function updateNameMargin() {
+                const val = parseFloat(nameTopMarginSlider.value).toFixed(1);
+                nameTopMarginValue.textContent = `${val} mm`;
+                setCssVar('--name-top-margin', `${val}mm`);
             }
 
             // --- Event Listeners ---
             document.getElementById('btnGenerate').addEventListener('click', generateQR);
             document.getElementById('btnClear').addEventListener('click', clearAllFields);
             document.getElementById('btnExport').addEventListener('click', exportToPDF);
+            
+            // NEW: Slider Listeners
+            phoneSizeSlider.addEventListener('input', updatePhoneSize);
+            phoneTopMarginSlider.addEventListener('input', updatePhoneMargin);
+            nameSizeSlider.addEventListener('input', updateNameSize);
+            nameTopMarginSlider.addEventListener('input', updateNameMargin);
+
 
             // --- Initial QR Generation on Load ---
             generateQR();
